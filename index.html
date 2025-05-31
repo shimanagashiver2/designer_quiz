@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>デザイナー作品クイズ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+        }
+        .option-image-container {
+            aspect-ratio: 3 / 2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background-color: #f3f4f6; /* bg-slate-100 for placeholder background */
+        }
+        .option-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Changed to contain to see the whole image */
+            transition: transform 0.3s ease-in-out;
+        }
+        .option-card:hover .option-image {
+            transform: scale(1.05);
+        }
+        .option-card.selected.correct {
+            border-color: #22c55e; /* green-500 */
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.5);
+        }
+        .option-card.selected.incorrect {
+            border-color: #ef4444; /* red-500 */
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+        }
+        .disabled-pointer {
+            pointer-events: none;
+        }
+        /* Tooltip for image filename */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 160px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 0;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%; /* Position the tooltip above the text */
+            left: 50%;
+            margin-left: -80px; /* Use half of the width to center the tooltip */
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.75rem; /* text-xs */
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col items-center justify-center p-4 selection:bg-sky-200 selection:text-sky-900">
+
+    <div class="bg-white shadow-xl rounded-lg p-6 md:p-8 w-full max-w-3xl">
+        <header class="mb-6 text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-sky-700">デザイナー作品クイズ</h1>
+            <p class="text-slate-600 mt-2">この作品をデザインしたのは誰でしょう？<br>（画像が表示されない場合は、HTMLファイルと同じフォルダに画像があるか確認してください）</p>
+        </header>
+
+        <main id="quiz-area">
+            <div id="designer-name-container" class="mb-6 text-center">
+                <p class="text-lg text-slate-700">デザイナー:</p>
+                <h2 id="designer-name" class="text-2xl md:text-3xl font-semibold text-sky-600 mt-1">---</h2>
+            </div>
+
+            <div id="options-container" class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-6">
+                </div>
+
+            <div id="feedback-container" class="text-center mb-6 min-h-[2em]">
+                <p id="feedback-message" class="text-xl font-semibold">&nbsp;</p>
+            </div>
+
+            <div class="text-center">
+                <button id="next-question-button" class="bg-sky-600 hover:bg-sky-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    次の問題へ
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <footer class="mt-8 text-center text-sm text-slate-500">
+        <p>&copy; 2025 デザイナー作品クイズ</p>
+    </footer>
+
+    <script>
+        // --- Data ---
+        // imageUrl には、HTMLファイルと同じ階層に置く画像ファイル名を指定してください。
+        // pdfRef は、どの資料のどの画像かを示す参考情報です（例: "01-1 / LC / 1" は資料01-1のル・コルビュジエの1番目の画像）。
+        const designData = [
+            // --- 01-1. 20世紀の三大建築家.jpg ---
+            // ル・コルビュジエ
+            { designer: "ル・コルビュジエ", work: "サヴォア邸", imageUrl: "スクリーンショット 2025-05-31 17.38.37.png", pdfRef: "01-1 / LC / 1" },
+            { designer: "ル・コルビュジエ", work: "LC1 アームチェア", imageUrl: "スクリーンショット 2025-05-31 17.38.45.png", pdfRef: "01-1 / LC / 2" },
+            { designer: "ル・コルビュジエ", work: "LC4 シェーズロング", imageUrl: "スクリーンショット 2025-05-31 17.38.52.png", pdfRef: "01-1 / LC / 3" },
+            { designer: "ル・コルビュジエ", work: "ロンシャンの礼拝堂", imageUrl: "スクリーンショット 2025-05-31 17.38.58.png", pdfRef: "01-1 / LC / 4" },
+            { designer: "ル・コルビュジエ", work: "LC2 ソファ", imageUrl: "スクリーンショット 2025-05-31 17.39.03.png", pdfRef: "01-1 / LC / 5" },
+            { designer: "ル・コルビュジエ", work: "LC7 スイベルチェア", imageUrl: "スクリーンショット 2025-05-31 17.39.11.png", pdfRef: "01-1 / LC / 6" },
+            // ルートヴィヒ・ミース・ファン・デル・ローエ
+            { designer: "ルートヴィヒ・ミース・ファン・デル・ローエ", work: "ファンズワース邸", imageUrl: "スクリーンショット 2025-05-31 17.39.19.png", pdfRef: "01-1 / Mies / 1" },
+            { designer: "ルートヴィヒ・ミース・ファン・デル・ローエ", work: "バルセロナチェア", imageUrl: "スクリーンショット 2025-05-31 17.39.31.png", pdfRef: "01-1 / Mies / 2" },
+            { designer: "ルートヴィヒ・ミース・ファン・デル・ローエ", work: "MRチェア/ブルノチェア", imageUrl: "スクリーンショット 2025-05-31 17.39.36.png", pdfRef: "01-1 / Mies / 3" },
+            { designer: "ルートヴィヒ・ミース・ファン・デル・ローエ", work: "バルセロナ・パビリオン", imageUrl: "スクリーンショット 2025-05-31 17.39.26.png", pdfRef: "01-1 / Mies / 4" },
+            // フランク・ロイド・ライト
+            { designer: "フランク・ロイド・ライト", work: "落水荘", imageUrl: "スクリーンショット 2025-05-31 17.39.43.png", pdfRef: "01-1 / FLW / 1" },
+            { designer: "フランク・ロイド・ライト", work: "タリアセン 2 フロアランプ", imageUrl: "スクリーンショット 2025-05-31 17.39.54.png", pdfRef: "01-1 / FLW / 2" },
+            { designer: "フランク・ロイド・ライト", work: "タリアセン 1 テーブルランプ", imageUrl: "スクリーンショット 2025-05-31 17.40.12.png", pdfRef: "01-1 / FLW / 3" },
+            { designer: "フランク・ロイド・ライト", work: "旧帝国ホテル", imageUrl: "スクリーンショット 2025-05-31 17.39.49.png", pdfRef: "01-1 / FLW / 4" },
+            { designer: "フランク・ロイド・ライト", work: "バレルチェア", imageUrl: "スクリーンショット 2025-05-31 17.40.00.png", pdfRef: "01-1 / FLW / 5" },
+            { designer: "フランク・ロイド・ライト", work: "ピーコックチェア", imageUrl: "スクリーンショット 2025-05-31 17.40.07.png", pdfRef: "01-1 / FLW / 6" },
+
+            // --- 02-1. 北欧のデザイナー-1.jpg ---
+            // ポール・ケアホルム
+            { designer: "ポール・ケアホルム", work: "PK8 チェア", imageUrl: "スクリーンショット 2025-05-31 17.40.44.png", pdfRef: "02-1 / Kjaerholm / 1" },
+            { designer: "ポール・ケアホルム", work: "PK11 チェア", imageUrl: "スクリーンショット 2025-05-31 17.40.50.png", pdfRef: "02-1 / Kjaerholm / 2" },
+            { designer: "ポール・ケアホルム", work: "PK22 ラウンジチェア", imageUrl: "スクリーンショット 2025-05-31 17.40.55.png", pdfRef: "02-1 / Kjaerholm / 3" },
+            { designer: "ポール・ケアホルム", work: "PK24 シェーズロング", imageUrl: "スクリーンショット 2025-05-31 17.41.00.png", pdfRef: "02-1 / Kjaerholm / 4" },
+            // ポール・ヘニングセン
+            { designer: "ポール・ヘニングセン", work: "PH5 ランプ", imageUrl: "スクリーンショット 2025-05-31 17.41.06.png", pdfRef: "02-1 / Henningsen / 1" },
+            { designer: "ポール・ヘニングセン", work: "PH アーティチョークランプ", imageUrl: "スクリーンショット 2025-05-31 17.41.11.png", pdfRef: "02-1 / Henningsen / 2" }, // User confirmed this is next to PH5 in their view
+            // アルヴァ・アールト
+            { designer: "アルヴァ・アールト", work: "パイミオチェア (アームチェア41)", imageUrl: "スクリーンショット 2025-05-31 17.41.17.png", pdfRef: "02-1 / Aalto / 1" },
+            { designer: "アルヴァ・アールト", work: "アアルトベース (サヴォイベース)", imageUrl: "スクリーンショット 2025-05-31 17.41.22.png", pdfRef: "02-1 / Aalto / 2" },
+            { designer: "アルヴァ・アールト", work: "スツール60", imageUrl: "スクリーンショット 2025-05-31 17.41.28.png", pdfRef: "02-1 / Aalto / 3" },
+            { designer: "アルヴァ・アールト", work: "ティートロリー900/901", imageUrl: "スクリーンショット 2025-05-31 17.41.34.png", pdfRef: "02-1 / Aalto / 4" },
+            // --- 02-1. 北欧のデザイナー-1.jpg (続き) ---
+            // ハンス・J・ウェグナー (Wegner)
+            { designer: "ハンス・J・ウェグナー", work: "Yチェア / ウィッシュボーンチェア", imageUrl: "スクリーンショット 2025-05-31 17.41.41.png", pdfRef: "02-1 / Wegner / 1" },
+            { designer: "ハンス・J・ウェグナー", work: "サークルチェア", imageUrl: "スクリーンショット 2025-05-31 17.41.46.png", pdfRef: "02-1 / Wegner / 2" },
+            { designer: "ハンス・J・ウェグナー", work: "ザ・チェア / ラウンドチェア", imageUrl: "スクリーンショット 2025-05-31 17.41.51.png", pdfRef: "02-1 / Wegner / 3" },
+            { designer: "ハンス・J・ウェグナー", work: "ピーコックチェア (Wegner)", imageUrl: "スクリーンショット 2025-05-31 17.41.57.png", pdfRef: "02-1 / Wegner / 4" },
+            { designer: "ハンス・J・ウェグナー", work: "パパベアチェア", imageUrl: "スクリーンショット 2025-05-31 17.42.02.png", pdfRef: "02-1 / Wegner / 5" },
+            // カイ・フランク (Franck)
+            { designer: "カイ・フランク", work: "ティーマ ピッチャー", imageUrl: "スクリーンショット 2025-05-31 17.42.08.png", pdfRef: "02-1 / Franck / 1" },
+            { designer: "カイ・フランク", work: "ゴブレット / ガラス作品", imageUrl: "スクリーンショット 2025-05-31 17.42.13.png", pdfRef: "02-1 / Franck / 2" },
+            { designer: "カイ・フランク", work: "ティーマ マグカップ", imageUrl: "スクリーンショット 2025-05-31 17.42.18.png", pdfRef: "02-1 / Franck / 3" },
+            { designer: "カイ・フランク", work: "カルティオ グラス", imageUrl: "スクリーンショット 2025-05-31 17.42.23.png", pdfRef: "02-1 / Franck / 4" },
+            // ヴァーナー・パントン (Panton)
+            { designer: "ヴァーナー・パントン", work: "リラクサー ロッキングチェア", imageUrl: "スクリーンショット 2025-05-31 17.42.28.png", pdfRef: "02-1 / Panton / 1" },
+            { designer: "ヴァーナー・パントン", work: "ムーンランプ", imageUrl: "スクリーンショット 2025-05-31 17.42.33.png", pdfRef: "02-1 / Panton / 2" },
+            { designer: "ヴァーナー・パントン", work: "パンテラ フロアランプ", imageUrl: "スクリーンショット 2025-05-31 17.42.43.png", pdfRef: "02-1 / Panton / 3" },
+            { designer: "ヴァーナー・パントン", work: "パントンチェア", imageUrl: "スクリーンショット 2025-05-31 17.42.47.png", pdfRef: "02-1 / Panton / 4" },
+            // アルネ・ヤコブセン (Jacobsen)
+            { designer: "アルネ・ヤコブセン", work: "アントチェア", imageUrl: "スクリーンショット 2025-05-31 17.42.53.png", pdfRef: "02-1 / Jacobsen / 1" },
+            { designer: "アルネ・ヤコブセン", work: "セブンチェア", imageUrl: "スクリーンショット 2025-05-31 17.42.57.png", pdfRef: "02-1 / Jacobsen / 2" },
+            { designer: "アルネ・ヤコブセン", work: "エッグチェア", imageUrl: "スクリーンショット 2025-05-31 17.43.02.png", pdfRef: "02-1 / Jacobsen / 3" },
+            { designer: "アルネ・ヤコブセン", work: "スワンチェア", imageUrl: "スクリーンショット 2025-05-31 17.43.07.png", pdfRef: "02-1 / Jacobsen / 4" },
+
+            // --- 03-1. アメリカのデザイナー-1.jpg ---
+            // リチャード・バックミンスター・フラー (Fuller)
+            { designer: "リチャード・バックミンスター・フラー", work: "ジオデシック・ドーム (モントリオール万博)", imageUrl: "スクリーンショット 2025-05-31 17.43.22.png", pdfRef: "03-1 / Fuller / 1" },
+            { designer: "リチャード・バックミンスター・フラー", work: "ダイマクション・カー", imageUrl: "スクリーンショット 2025-05-31 17.43.28.png", pdfRef: "03-1 / Fuller / 2" },
+            { designer: "リチャード・バックミンスター・フラー", work: "フライズアイ・ドーム", imageUrl: "スクリーンショット 2025-05-31 17.43.34.png", pdfRef: "03-1 / Fuller / 3" },
+            // チャールズ・イームズ (Eames)
+            { designer: "チャールズ・イームズ", work: "LCW (ラウンジチェアウッド)", imageUrl: "スクリーンショット 2025-05-31 17.43.43.png", pdfRef: "03-1 / Eames / 1" },
+            { designer: "チャールズ・イームズ", work: "DCM (ダイニングチェアメタル)", imageUrl: "スクリーンショット 2025-05-31 17.43.48.png", pdfRef: "03-1 / Eames / 2" },
+            { designer: "チャールズ・イームズ", work: "プラスチックシェルサイドチェア (DSR)", imageUrl: "スクリーンショット 2025-05-31 17.43.54.png", pdfRef: "03-1 / Eames / 3" }, // エッフェルベース
+            { designer: "チャールズ・イームズ", work: "プラスチックシェルサイドチェア (DSW)", imageUrl: "スクリーンショット 2025-05-31 17.43.59.png", pdfRef: "03-1 / Eames / 4" }, // ウッドベース
+            { designer: "チャールズ・イームズ", work: "ラウンジチェア＆オットマン", imageUrl: "スクリーンショット 2025-05-31 17.44.09.png", pdfRef: "03-1 / Eames / 5" },
+            { designer: "チャールズ・イームズ", work: "ラ・シェーズ", imageUrl: "スクリーンショット 2025-05-31 17.44.13.png", pdfRef: "03-1 / Eames / 6" },
+            { designer: "チャールズ・イームズ", work: "ESU (イームズストレージユニット)", imageUrl: "スクリーンショット 2025-05-31 17.44.20.png", pdfRef: "03-1 / Eames / 7" },
+            // --- 03-1. アメリカのデザイナー-1.jpg (続き) ---
+            // ジョージ・ネルソン (Nelson)
+            { designer: "ジョージ・ネルソン", work: "ボールクロック", imageUrl: "スクリーンショット 2025-05-31 17.44.25.png", pdfRef: "03-1 / Nelson / 1" },
+            { designer: "ジョージ・ネルソン", work: "マシュマロソファ", imageUrl: "スクリーンショット 2025-05-31 17.44.30.png", pdfRef: "03-1 / Nelson / 2" },
+            { designer: "ジョージ・ネルソン", work: "プラットフォームベンチ", imageUrl: "スクリーンショット 2025-05-31 17.44.35.png", pdfRef: "03-1 / Nelson / 3" },
+            { designer: "ジョージ・ネルソン", work: "ココナッツチェア", imageUrl: "スクリーンショット 2025-05-31 17.44.41.png", pdfRef: "03-1 / Nelson / 4" },
+            // カリム・ラシッド (Rashid)
+            { designer: "カリム・ラシッド", work: "ベイビーバイトスツール", imageUrl: "スクリーンショット 2025-05-31 17.44.47.png", pdfRef: "03-1 / Rashid / 1" },
+            { designer: "カリム・ラシッド", work: "IDEE APHEX CHAIR (イデー エイフェックス チェア)", imageUrl: "スクリーンショット 2025-05-31 17.44.53.png", pdfRef: "03-1 / Rashid / 2" },
+            { designer: "カリム・ラシッド", work: "KAJ ウォッチ", imageUrl: "スクリーンショット 2025-05-31 17.45.01.png", pdfRef: "03-1 / Rashid / 3" },
+            { designer: "カリム・ラシッド", work: "ガービーノ ダストボックス", imageUrl: "スクリーンショット 2025-05-31 17.45.07.png", pdfRef: "03-1 / Rashid / 4" },
+            // --- 03-1. アメリカのデザイナー-1.jpg (続き) ---
+            // ハリー・ベルトイヤ (Bertoia)
+            { designer: "ハリー・ベルトイヤ", work: "ダイヤモンドチェア (シートパッド)", imageUrl: "スクリーンショット 2025-05-31 17.45.13.png", pdfRef: "03-1 / Bertoia / 1" },
+            { designer: "ハリー・ベルトイヤ", work: "ダイヤモンドチェア (フルカバー)", imageUrl: "スクリーンショット 2025-05-31 17.45.20.png", pdfRef: "03-1 / Bertoia / 2" },
+            // シドニー・ジェイ・ミード (Mead)
+            { designer: "シドニー・ジェイ・ミード", work: "ブレードランナー スピナー", imageUrl: "スクリーンショット 2025-05-31 17.45.26.png", pdfRef: "03-1 / Mead / 1" },
+            { designer: "シドニー・ジェイ・ミード", work: "未来の大型運搬車コンセプト", imageUrl: "スクリーンショット 2025-05-31 17.45.31.png", pdfRef: "03-1 / Mead / 2" },
+            // --- 04-1. イタリア デザイナー-1.jpg ---
+            // アキッレ・カスティリオーニ (Castiglioni)
+            { designer: "アキッレ・カスティリオーニ", work: "アルナッジオ スツール", imageUrl: "スクリーンショット 2025-05-31 17.45.45.png", pdfRef: "04-1 / Castiglioni / 1" },
+            { designer: "アキッレ・カスティリオーニ", work: "スリークスプーン (アレッシィ)", imageUrl: "スクリーンショット 2025-05-31 17.45.50.png", pdfRef: "04-1 / Castiglioni / 2" },
+            { designer: "アキッレ・カスティリオーニ", work: "メッザドロ スツール", imageUrl: "スクリーンショット 2025-05-31 17.45.55.png", pdfRef: "04-1 / Castiglioni / 3" },
+            { designer: "アキッレ・カスティリオーニ", work: "スピラーレ アッシュトレイ", imageUrl: "スクリーンショット 2025-05-31 17.46.00.png", pdfRef: "04-1 / Castiglioni / 4" },
+            { designer: "アキッレ・カスティリオーニ", work: "アルコランプ", imageUrl: "スクリーンショット 2025-05-31 17.46.05.png", pdfRef: "04-1 / Castiglioni / 5" },
+            // マルチェロ・ガンディーニ (Gandini)
+            { designer: "マルチェロ・ガンディーニ", work: "ランボルギーニ ミウラ", imageUrl: "スクリーンショット 2025-05-31 17.46.12.png", pdfRef: "04-1 / Gandini / 1" },
+            { designer: "マルチェロ・ガンディーニ", work: "ルノー 5 (サンク)", imageUrl: "スクリーンショット 2025-05-31 17.46.17.png", pdfRef: "04-1 / Gandini / 2" },
+            { designer: "マルチェロ・ガンディーニ", work: "ランボルギーニ カウンタック", imageUrl: "スクリーンショット 2025-05-31 17.46.23.png", pdfRef: "04-1 / Gandini / 3" },
+            { designer: "マルチェロ・ガンディーニ", work: "ランチア ストラトス HFゼロ", imageUrl: "スクリーンショット 2025-05-31 17.46.30.png", pdfRef: "04-1 / Gandini / 4" },
+            // --- 04-1. イタリア デザイナー-1.jpg (続き) ---
+            // ジョルジェット・ジウジアーロ (Giugiaro)
+            { designer: "ジョルジェット・ジウジアーロ", work: "デロリアン DMC-12", imageUrl: "スクリーンショット 2025-05-31 17.46.36.png", pdfRef: "04-1 / Giugiaro / 1" },
+            { designer: "ジョルジェット・ジウジアーロ", work: "ニコン F3 (カメラ)", imageUrl: "スクリーンショット 2025-05-31 17.46.41.png", pdfRef: "04-1 / Giugiaro / 2" },
+            { designer: "ジョルジェット・ジウジアーロ", work: "セイコー スピードマスター (腕時計)", imageUrl: "スクリーンショット 2025-05-31 17.46.46.png", pdfRef: "04-1 / Giugiaro / 3" },
+            { designer: "ジョルジェット・ジウジアーロ", work: "フォルクスワーゲン ゴルフ Mk1", imageUrl: "スクリーンショット 2025-05-31 17.46.50.png", pdfRef: "04-1 / Giugiaro / 4" },
+            { designer: "ジョルジェット・ジウジアーロ", work: "スバル アルシオーネSVX", imageUrl: "スクリーンショット 2025-05-31 17.46.55.png", pdfRef: "04-1 / Giugiaro / 5" },
+            // エットレ・ソットサス (Sottsass)
+            { designer: "エットレ・ソットサス", work: "オリベッティ バレンタイン (タイプライター)", imageUrl: "スクリーンショット 2025-05-31 17.47.02.png", pdfRef: "04-1 / Sottsass / 1" },
+            { designer: "エットレ・ソットサス", work: "カールトン ルームディバイダー", imageUrl: "スクリーンショット 2025-05-31 17.47.09.png", pdfRef: "04-1 / Sottsass / 2" },
+            { designer: "エットレ・ソットサス", work: "タヒチ ランプ", imageUrl: "スクリーンショット 2025-05-31 17.47.14.png", pdfRef: "04-1 / Sottsass / 3" },
+            { designer: "エットレ・ソットサス", work: "メンフィススタイル ブックシェルフ", imageUrl: "スクリーンショット 2025-05-31 17.47.21.jpg", pdfRef: "04-1 / Sottsass / 4" },
+            // --- 04-1. イタリア デザイナー-1.jpg (続き) ---
+            // マリオ・ベリーニ (Bellini)
+            { designer: "マリオ・ベリーニ", work: "カマレオンダ ソファ", imageUrl: "スクリーンショット 2025-05-31 17.47.29.png", pdfRef: "04-1 / Bellini / 1" },
+            { designer: "マリオ・ベリーニ", work: "キャブチェア (412/413)", imageUrl: "スクリーンショット 2025-05-31 17.47.40.png", pdfRef: "04-1 / Bellini / 2" },
+            { designer: "マリオ・ベリーニ", work: "ヤマハ TC-800GL (カセットデッキ)", imageUrl: "スクリーンショット 2025-05-31 17.47.45.png", pdfRef: "04-1 / Bellini / 3" },
+            { designer: "マリオ・ベリーニ", work: "オリベッティ ディヴィズンマ18 (電卓)", imageUrl: "スクリーンショット 2025-05-31 17.47.51.png", pdfRef: "04-1 / Bellini / 4" },
+            // ブルーノ・ムナーリ (Munari)
+            { designer: "ブルーノ・ムナーリ", work: "フォークランドランプ", imageUrl: "スクリーンショット 2025-05-31 17.47.58.png", pdfRef: "04-1 / Munari / 1" },
+            { designer: "ブルーノ・ムナーリ", work: "Zizi a Scimmietta (猿のジジ)", imageUrl: "スクリーンショット 2025-05-31 17.48.04.png", pdfRef: "04-1 / Munari / 2" },
+            { designer: "ブルーノ・ムナーリ", work: "ファンタジア (書籍)", imageUrl: "スクリーンショット 2025-05-31 17.48.09.png", pdfRef: "04-1 / Munari / 3" },
+            { designer: "ブルーノ・ムナーリ", work: "モノからモノが生まれる (書籍)", imageUrl: "スクリーンショット 2025-05-31 17.48.15.png", pdfRef: "04-1 / Munari / 4" },
+            { designer: "ブルーノ・ムナーリ", work: "木をかこう (書籍)", imageUrl: "スクリーンショット 2025-05-31 17.48.21.png", pdfRef: "04-1 / Munari / 5" }
+        ];
+
+        // --- DOM Elements ---
+        const designerNameElement = document.getElementById('designer-name');
+        const optionsContainer = document.getElementById('options-container');
+        const feedbackMessageElement = document.getElementById('feedback-message');
+        const nextQuestionButton = document.getElementById('next-question-button');
+
+        // --- State ---
+        let currentCorrectItem = null;
+        let displayedOptions = [];
+
+        // --- Functions ---
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function generateQuestion() {
+            const correctItemIndex = Math.floor(Math.random() * designData.length);
+            currentCorrectItem = designData[correctItemIndex];
+            designerNameElement.textContent = currentCorrectItem.designer;
+
+            let decoys = [];
+            const availableDecoys = designData.filter(item => item.designer !== currentCorrectItem.designer && item.work !== currentCorrectItem.work);
+            shuffleArray(availableDecoys);
+            decoys = availableDecoys.slice(0, 2);
+            
+            if (decoys.length < 2) {
+                const alternativeDecoys = designData.filter(item => item.work !== currentCorrectItem.work && !decoys.some(d => d.work === item.work));
+                shuffleArray(alternativeDecoys);
+                for (let i = 0; i < alternativeDecoys.length && decoys.length < 2; i++) {
+                    if (!decoys.some(d => d.work === alternativeDecoys[i].work)) {
+                         decoys.push(alternativeDecoys[i]);
+                    }
+                }
+            }
+             if (decoys.length < 2 && designData.length > 2) { // Ensure enough decoys if possible
+                let tempDecoys = designData.filter(item => item.work !== currentCorrectItem.work);
+                shuffleArray(tempDecoys);
+                decoys = []; // Reset decoys
+                for(const d of tempDecoys) {
+                    if (decoys.length < 2 && !decoys.some(existing => existing.work === d.work)) {
+                        decoys.push(d);
+                    }
+                }
+            }
+
+
+            const options = [currentCorrectItem, ...decoys];
+             if (options.length < 3 && designData.length >=3) { // Fallback if not enough unique decoys
+                let fillerCount = 3 - options.length;
+                const allItemsShuffled = shuffleArray([...designData]);
+                for(let item of allItemsShuffled) {
+                    if (fillerCount === 0) break;
+                    if (!options.some(opt => opt.work === item.work)) {
+                        options.push(item);
+                        fillerCount--;
+                    }
+                }
+            }
+            
+            displayedOptions = shuffleArray(options.slice(0,3)); // Ensure 3 options
+
+            optionsContainer.innerHTML = '';
+            displayedOptions.forEach((item, index) => {
+                const optionElement = document.createElement('div');
+                optionElement.classList.add('option-card', 'bg-slate-50', 'p-3', 'rounded-lg', 'shadow-md', 'cursor-pointer', 'transition-all', 'duration-300', 'hover:shadow-lg', 'border-2', 'border-transparent');
+                
+                const altText = `${item.work} (${item.designer})`;
+                const placeholderErrorUrl = `https://placehold.co/300x200/e0e7ff/7f1d1d?text=画像読込失敗%0A${encodeURIComponent(item.imageUrl.split('/').pop())}`;
+
+                optionElement.innerHTML = `
+                    <div class="option-image-container rounded-md overflow-hidden bg-slate-200 tooltip">
+                        <img src="${item.imageUrl}" alt="${altText}" class="option-image" onerror="this.onerror=null; this.src='${placeholderErrorUrl}'; this.alt='画像読込エラー: ${item.imageUrl.split('/').pop()}';">
+                        <span class="tooltiptext">${item.imageUrl.split('/').pop()}</span>
+                    </div>
+                    <p class="mt-2 text-sm font-semibold text-center text-slate-700">${item.work}</p>
+                    <p class="mt-1 text-xs text-center text-slate-500">Ref: ${item.pdfRef}</p>
+                `;
+                optionElement.addEventListener('click', () => handleOptionClick(item, optionElement));
+                optionsContainer.appendChild(optionElement);
+            });
+
+            feedbackMessageElement.textContent = '作品を選んでください。';
+            feedbackMessageElement.className = 'text-xl font-semibold text-slate-700';
+            nextQuestionButton.disabled = true;
+            optionsContainer.classList.remove('disabled-pointer');
+        }
+
+        function handleOptionClick(selectedItem, clickedElement) {
+            optionsContainer.classList.add('disabled-pointer');
+            clickedElement.classList.add('selected');
+
+            if (selectedItem.work === currentCorrectItem.work && selectedItem.designer === currentCorrectItem.designer) {
+                feedbackMessageElement.textContent = '正解！';
+                feedbackMessageElement.className = 'text-xl font-semibold text-green-600';
+                clickedElement.classList.add('correct');
+            } else {
+                feedbackMessageElement.textContent = `不正解。正解は ${currentCorrectItem.work} (${currentCorrectItem.designer}) でした。`;
+                feedbackMessageElement.className = 'text-xl font-semibold text-red-600';
+                clickedElement.classList.add('incorrect');
+
+                const correctOptionElement = Array.from(optionsContainer.children).find((el, index) => {
+                     return displayedOptions[index] && displayedOptions[index].work === currentCorrectItem.work && displayedOptions[index].designer === currentCorrectItem.designer;
+                });
+                if (correctOptionElement) {
+                    correctOptionElement.classList.add('correct');
+                }
+            }
+            nextQuestionButton.disabled = false;
+        }
+
+        nextQuestionButton.addEventListener('click', generateQuestion);
+
+        if (designData.length < 3) {
+             optionsContainer.innerHTML = '<p class="text-red-500 col-span-full text-center">クイズを生成するためのデータが不足しています。3つ以上の作品データが必要です。</p>';
+             designerNameElement.textContent = "エラー";
+             feedbackMessageElement.textContent = "データ不足";
+             nextQuestionButton.disabled = true;
+        } else {
+            generateQuestion();
+        }
+    </script>
+</body>
+</html>
